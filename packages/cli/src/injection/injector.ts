@@ -6,10 +6,21 @@ import type {
     GirCallbackElement,
     GirCallableParamElement,
     Environment,
+    GirFunctionElement,
 } from '../types/index.js'
 import { Logger } from '../logger.js'
 
-import { classesAll, classesGjs, classesNode, callbacksGjs, callbacksNode, callbacksAll } from './index.js'
+import {
+    classesAll,
+    classesGjs,
+    classesNode,
+    callbacksAll,
+    callbacksGjs,
+    callbacksNode,
+    functionsAll,
+    functionsGjs,
+    functionsNode,
+} from './index.js'
 import { GirFactory } from '../gir-factory.js'
 
 /**
@@ -29,7 +40,7 @@ export class Injector {
             return
         }
 
-        const classes = this.environment === 'gjs' ? [...classesAll, ...classesGjs] : [...classesAll, ...classesNode]
+        const classes = [...classesAll, ...(this.environment === 'gjs' ? classesGjs : classesNode)]
 
         const toClass = classes.find((cls) => {
             return (
@@ -80,22 +91,36 @@ export class Injector {
         return girClass
     }
 
+    toFunction(girFunction: GirFunctionElement) {
+        const functions = [...functionsAll, ...(this.environment === 'gjs' ? functionsGjs : functionsNode)]
+
+        const { _module } = girFunction
+        if (!_module) return
+
+        const toFunction = functions.find((injectFunction) => {
+            return (
+                injectFunction.name === girFunction.$.name &&
+                _module.namespace === injectFunction.namespace &&
+                injectFunction.versions.includes(_module.version)
+            )
+        })
+
+        if (toFunction)
+            return this.girFactory.newGirFunction({ ...toFunction, isGlobal: true, isInjected: true }, null)._tsData
+    }
+
     /** Inject additional generics to existing callback interfaces */
     toCallback(girCallback: GirCallbackElement) {
-        const callbacks =
-            this.environment === 'gjs' ? [...callbacksAll, ...callbacksGjs] : [...callbacksAll, ...callbacksNode]
+        const callbacks = [...callbacksAll, ...(this.environment === 'gjs' ? callbacksGjs : callbacksNode)]
 
-        if (!girCallback._module || !girCallback._tsData) {
-            return girCallback
-        }
+        const { _module, _tsData } = girCallback
+        if (!(_module && _tsData)) return girCallback
 
         const toCallback = callbacks.find((injectCallback) => {
             return (
-                girCallback._module &&
-                girCallback._tsData &&
-                injectCallback.name === girCallback._tsData.name &&
-                girCallback._module.namespace === injectCallback.namespace &&
-                injectCallback.versions.includes(girCallback._module.version)
+                injectCallback.name === _tsData.name &&
+                _module.namespace === injectCallback.namespace &&
+                injectCallback.versions.includes(_module.version)
             )
         })
 
@@ -106,9 +131,9 @@ export class Injector {
         // NOTICE: We merge the in parameters here
         // TODO: Unify injections, merges and overrides
         if (toCallback?.inParams) {
-            for (let i = 0; i < girCallback._tsData.inParams.length; i++) {
+            for (let i = 0; i < _tsData.inParams.length; i++) {
                 const newInParam = toCallback.inParams[i]
-                const oldInParam = girCallback._tsData.inParams[i]
+                const oldInParam = _tsData.inParams[i]
                 if (newInParam && oldInParam && oldInParam._tsData?.name === newInParam.name) {
                     oldInParam._tsData.type = this.girFactory.newTsTypes(newInParam.type)
                 }
@@ -117,7 +142,7 @@ export class Injector {
 
         if (toCallback?.tsCallbackInterface) {
             if (toCallback?.tsCallbackInterface.generics) {
-                girCallback._tsData.tsCallbackInterface?.generics.push(
+                _tsData.tsCallbackInterface?.generics.push(
                     ...this.girFactory.newGenerics(toCallback.tsCallbackInterface.generics),
                 )
             }
@@ -129,8 +154,7 @@ export class Injector {
     toParameterType(girParam: GirCallableParamElement) {
         const tsTypes = girParam._tsData?.type
 
-        const callbacks =
-            this.environment === 'gjs' ? [...callbacksAll, ...callbacksGjs] : [...callbacksAll, ...callbacksNode]
+        const callbacks = [...callbacksAll, ...(this.environment === 'gjs' ? callbacksGjs : callbacksNode)]
 
         if (!girParam._module || !girParam._tsData) {
             return girParam

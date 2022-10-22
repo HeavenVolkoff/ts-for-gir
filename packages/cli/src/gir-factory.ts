@@ -15,7 +15,7 @@ import type {
     TsProperty,
     TsType,
     TsDoc,
-    InjectionFunction,
+    InjectionMethod,
     InjectionInstanceParameter,
     InjectionGenericParameter,
     InjectionType,
@@ -31,6 +31,7 @@ import type {
     TypeTsFunction,
     TypeTsProperty,
     TsClass,
+    InjectionFunction,
 } from './types/index.js'
 
 import { GENERIC_NAMES } from './constants.js'
@@ -122,9 +123,9 @@ export class GirFactory {
     }
 
     newGirFunctions(
-        injectFunctions: InjectionFunction[],
+        injectFunctions: InjectionMethod[] | InjectionFunction[],
         parent: TsClass | null,
-        overrideToAll: Partial<InjectionFunction> = {},
+        overrideToAll: Partial<InjectionMethod> = {},
     ) {
         const girFunctionElements: Array<
             GirConstructorElement & GirFunctionElement & GirMethodElement & GirVirtualMethodElement
@@ -137,7 +138,7 @@ export class GirFactory {
     }
 
     newGirFunction(
-        tsData: InjectionFunction,
+        tsData: InjectionMethod | InjectionFunction,
         parent: TsClass | null,
     ): GirConstructorElement & GirFunctionElement & GirMethodElement & GirVirtualMethodElement {
         const _tsData = this.newTsFunction(tsData, parent)
@@ -207,20 +208,23 @@ export class GirFactory {
         return result
     }
 
-    newTsFunction(tsData: InjectionFunction, parent: TsClass | null): TsFunction {
+    newTsFunction(tsData: InjectionMethod | InjectionFunction, parent: TsClass | null): TsFunction {
+        const isStatic = ('isStatic' in tsData && tsData.isStatic) || false
+        const girTypeName = ('girTypeName' in tsData && tsData.girTypeName) || 'function'
         const tsFunc: TsFunction & TsMethod = {
             ...tsData,
             returnTypes: this.newTsTypes(tsData.returnTypes || []),
             isArrowType: tsData.isArrowType || false,
-            isStatic: tsData.isStatic || false,
-            isGlobal: tsData.isGlobal || false,
-            isVirtual: tsData.isVirtual || false,
+            isStatic,
+            isGlobal: ('isGlobal' in tsData && tsData.isGlobal) || false,
+            isVirtual: ('isVirtual' in tsData && tsData.isVirtual) || false,
             isInjected: tsData.isInjected || false,
             retTypeIsVoid: tsData.returnTypes?.length === 1 && tsData.returnTypes[0]?.type === 'void',
             generics: this.newGenerics(tsData.generics || []),
             overloads: tsData.overloads || [],
             doc: this.newTsDoc(tsData.doc),
-            tsTypeName: this.girTypeNameToTsTypeName(tsData.girTypeName, tsData.isStatic || false),
+            girTypeName,
+            tsTypeName: this.girTypeNameToTsTypeName(girTypeName, isStatic),
             inParams: [],
             outParams: [],
             instanceParameters: [],
@@ -229,7 +233,9 @@ export class GirFactory {
 
         tsFunc.inParams.push(...this.newGirCallableParamElements(tsData.inParams, tsFunc))
         tsFunc.outParams.push(...this.newGirCallableParamElements(tsData.outParams, tsFunc))
-        tsFunc.instanceParameters.push(...this.newGirInstanceParameters(tsData.instanceParameters))
+        tsFunc.instanceParameters.push(
+            ...this.newGirInstanceParameters(('instanceParameters' in tsData && tsData.instanceParameters) || []),
+        )
 
         return tsFunc
     }
