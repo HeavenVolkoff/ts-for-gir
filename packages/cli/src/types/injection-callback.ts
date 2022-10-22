@@ -4,7 +4,7 @@ import type { InjectionGenericParameter, InjectionParameter } from './index.js'
 export interface InjectionCallback {
     /** The versions on which the injections are to be applied. E.g. `["3.0", "2.0"]` */
     versions: string[]
-    /** The versions on which the injections are to be applied. E.g. `"Gtk"` */
+    /** The namespace on which the injections are to be applied. E.g. `"Gtk"` */
     namespace: string
     name: string
 

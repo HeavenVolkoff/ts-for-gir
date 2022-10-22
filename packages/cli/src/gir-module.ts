@@ -2632,14 +2632,16 @@ export class GirModule {
 
         if (this.ns.function) {
             for (const girFunc of this.ns.function) {
-                girFunc._tsData = this.getFunctionTsData(girFunc, 'function', null, {
-                    isStatic: false,
-                    isArrowType: false,
-                    isGlobal: true,
-                    isVirtual: false,
-                    returnType: null,
-                    generics: [],
-                })
+                girFunc._tsData =
+                    this.inject.toFunction(girFunc) ||
+                    this.getFunctionTsData(girFunc, 'function', null, {
+                        isStatic: false,
+                        isArrowType: false,
+                        isGlobal: true,
+                        isVirtual: false,
+                        returnType: null,
+                        generics: [],
+                    })
                 if (!girFunc._tsData) continue
             }
         }
