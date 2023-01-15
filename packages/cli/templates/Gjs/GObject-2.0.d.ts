@@ -236,3 +236,22 @@ export function registerClass<
 ): T;
 
 export function registerClass<T extends AnyClass>(cls: T): T
+
+declare global {
+    // https://gitlab.gnome.org/GNOME/gjs/-/blob/1.72.3/modules/core/overrides/GObject.js#L303-328
+    interface BooleanConstructor {
+        $gtype: GType<boolean>
+    }
+
+    interface NumberConstructor {
+        $gtype: GType<number>
+    }
+
+    interface StringConstructor {
+        $gtype: GType<string>
+    }
+
+    interface ObjectConstructor {
+        $gtype: GType<object>
+    }
+}

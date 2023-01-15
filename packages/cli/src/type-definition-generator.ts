@@ -1405,23 +1405,12 @@ export default class TypeDefinitionGenerator implements Generator {
         )
 
         // Types
-        await templateProcessor.create('Gjs.d.ts', this.config.outdir, 'Gjs.d.ts')
         await templateProcessor.create('index.d.ts', this.config.outdir, 'index.d.ts')
 
         // Lib
         if (this.config.buildType === 'lib') {
             await templateProcessor.create('index.js', this.config.outdir, 'index.js')
-            const template = 'Gjs.js'
-            await templateProcessor.create(template, this.config.outdir, 'Gjs.js')
         }
-    }
-
-    private async exportGjsCastLib(inheritanceTable: InheritanceTable) {
-        if (!this.config.outdir) return
-
-        const inheritanceTableKeys = Object.keys(inheritanceTable)
-        const templateProcessor = new TemplateProcessor({ inheritanceTableKeys, inheritanceTable }, 'gjs', this.config)
-        await templateProcessor.create('cast.ts', this.config.outdir, 'cast.ts')
     }
 
     private async exportNodeGtk(girModules: GirModule[], girModulesGrouped: GirModulesGrouped[]) {
@@ -1452,7 +1441,6 @@ export default class TypeDefinitionGenerator implements Generator {
         if (this.config.environment === 'gjs' && girModulesGrouped && inheritanceTable) {
             // GJS internal stuff
             await this.exportGjs(girModules, girModulesGrouped)
-            await this.exportGjsCastLib(inheritanceTable)
         }
     }
 }
